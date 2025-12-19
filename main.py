@@ -9,15 +9,14 @@ from src import (
 
 def main():
     # Load the pretrained language model with 4-bit quantization and
-    # tokenizer from Hugging Face Hub
-    model, tokenizer = load_model()
+    # tokenizer from Hugging Face Hub, wrapped in LangChain (ChatHuggingFace)
+    llm = load_model()
 
     # Step 1: Generate headline using the model
     # system_prompt_headline: Sets model behavior for headline generation
     # User prompt: Specifies the task of creating viral headlines
     headline = generate_text(
-        model,
-        tokenizer,
+        llm,
         system_prompt_headline,
         "Generate one viral headline for a psychology/manipulation channel.",
     )
@@ -30,7 +29,7 @@ def main():
     content_prompt = (
         f"Create 6-8 viral short-form items with the headline: '{headline}'"
     )
-    content = generate_text(model, tokenizer, system_prompt_content, content_prompt)
+    content = generate_text(llm, system_prompt_content, content_prompt)
     print("\nGenerated Content:\n", content)
 
     # Step 3: Review and refine the generated content
@@ -39,9 +38,7 @@ def main():
     review_prompt = (
         f"Here is the content:\n{content}\nImprove it according to the rules."
     )
-    refined_content = generate_text(
-        model, tokenizer, system_prompt_review, review_prompt
-    )
+    refined_content = generate_text(llm, system_prompt_review, review_prompt)
     print("\nRefined Content:\n", refined_content)
 
 

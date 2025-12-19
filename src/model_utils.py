@@ -1,21 +1,32 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    BitsAndBytesConfig,
+    pipeline,
+)
+from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 import torch
 
 
-def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct"):
+def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct") -> ChatHuggingFace:
     """
-    Load a pretrained causal language model with 4-bit quantization.
+    Load a pretrained language model with 4-bit quantization wrapped in LangChain.
 
     Loads a model from Hugging Face Hub with 4-bit quantization to
     reduce memory usage. Also loads the corresponding tokenizer for
-    text processing.
+    text processing. Returns a LangChain ChatHuggingFace wrapper that
+    integrates the model and tokenizer for chat-based text generation.
 
     Args:
         model_id: Model identifier on Hugging Face Hub. Defaults to
                   meta-llama/Llama-3.1-8B-Instruct
 
     Returns:
-        Tuple containing the loaded model and tokenizer.
+        ChatHuggingFace: A LangChain ChatHuggingFace object that wraps
+                        the quantized model and tokenizer for text
+                        generation in chat format.
     """
     # 4-bit quantization config - reduces model size and memory usage by
     # converting weights to 4-bit precision
@@ -60,77 +71,77 @@ def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct"):
     # without randomness from training-specific layers
     model.eval()
 
-    return model, tokenizer
+    # Initialize the Transformers pipeline for text generation.
+    # This acts as the backend engine that manages the model and tokenizer.
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        # Controls randomness: 0.1 is focused/stable, 0.8+ is creative/diverse.
+        temperature=0.8,
+        # Nucleus sampling: only considers the top 85% of most likely tokens.
+        top_p=0.85,
+        # The maximum number of new tokens to generate (excluding input).
+        max_new_tokens=650,
+        # Must be True to enable the sampling-based decoding (temp/top_p).
+        do_sample=True,
+        # Discourages the model from repeating the same phrases or words.
+        repetition_penalty=1.1,
+        # Only return the newly generated text, without the original prompt.
+        return_full_text=False,
+    )
+
+    # Wrap the native Transformers pipeline into a LangChain-compatible object.
+    # This enables use within LCEL (LangChain Expression Language) chains.
+    llm = HuggingFacePipeline(pipeline=pipe)
+
+    # This specifically links the tokenizer to the chat formatting logic
+    return ChatHuggingFace(llm=llm, tokenizer=tokenizer)
 
 
 def generate_text(
-    model: AutoModelForCausalLM,
-    tokenizer: AutoTokenizer,
+    chat_model: ChatHuggingFace,
     system_prompt: str,
-    user_prompt_text: str,
-    max_tokens: int = 650,
-):
+    user_prompt: str,
+) -> str:
     """
-    Generate text using a pretrained language model with chat prompts.
+    Generate text using a chat model with system and user prompts.
 
-    Takes system and user prompts, formats them for the model, and
-    generates a response using sampling-based decoding with temperature
-    and nucleus sampling for natural output.
+    Creates a prompt template with system and user messages, builds
+    a processing chain through LangChain Expression Language (LCEL),
+    and generates a response from the chat model.
 
-    Params:
-        model: Pretrained causal language model.
-        tokenizer: Tokenizer matching the model.
-        system_prompt: System prompt that sets model behavior.
-        user_prompt_text: User input to generate response for.
-        max_tokens: Maximum tokens to generate. Defaults to 650.
+    Args:
+        chat_model: A LangChain ChatHuggingFace model instance for
+                   generating text responses.
+        system_prompt: The system prompt that sets the behavior and
+                      context for the model.
+        user_prompt: The user input prompt to generate a response for.
 
     Returns:
-        Generated text response from the model.
+        str: The generated text response from the model, stripped of
+             leading/trailing whitespace.
     """
-    # Create message list with system and user prompts for chat template
-    # role="system": System message that sets the behavior and context
-    # role="user": User input message that the model should respond to
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt_text},
-    ]
+    # Create a chat prompt template with system and user message roles.
+    # This follows the standard chat structure where the system message
+    # provides context and the user message is the actual query.
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            ("system", "{system}"),
+            ("user", "{user}"),
+        ]
+    )
 
-    # Apply chat template and tokenize messages into model input format
-    # apply_chat_template(): Format messages according to model's chat
-    # add_generation_prompt=True: Append token to signal generation start
-    # tokenize=True: Convert text to token IDs the model understands
-    # return_dict=True: Return output as dictionary with 'input_ids'
-    # return_tensors="pt": Return PyTorch tensors instead of lists
-    # .to(model.device): Move tensors to same device as model (GPU/CPU)
-    inputs = tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-    ).to(model.device)
+    # Create the LCEL chain: Template -> Model -> String Output
+    # The chat_model automatically applies the tokenizer's chat template
+    # formatting to ensure proper message structure for the model.
+    # StrOutputParser converts the model output to a clean string.
+    chain = prompt_template | chat_model | StrOutputParser()
 
-    # Generate text with specified parameters in no-gradient context
-    # torch.no_grad(): Disable gradient computation for speed/memory
-    # **inputs: Unpack input_ids and attention_mask tensors
-    # max_new_tokens: Maximum number of new tokens to generate (650 default)
-    # temperature=0.8: Controls randomness (lower=deterministic, high=creative)
-    # top_p=0.85: Nucleus sampling - tokens with cumulative prob up to 0.85
-    # do_sample=True: Use sampling instead of greedy for natural outputs
-    # repetition_penalty=1.1: Penalize repeated tokens to reduce repetition
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_tokens,
-            temperature=0.8,
-            top_p=0.85,
-            do_sample=True,
-            repetition_penalty=1.1,
-        )
+    # Invoke the chain with the provided prompts to generate a response.
+    # The template fills in the {system} and {user} placeholders with
+    # the actual prompt values.
+    response = chain.invoke({"system": system_prompt, "user": user_prompt})
 
-    # Decode generated tokens back to text
-    # outputs[0]: Get first batch item from generated output
-    # [inputs["input_ids"].shape[-1]:]: Slice for newly generated tokens
-    # .strip(): Remove leading/trailing whitespace
-    text = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1] :]).strip()
-    return text
+    # Return the response with leading/trailing whitespace removed
+    return response.strip()
