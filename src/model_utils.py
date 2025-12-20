@@ -7,6 +7,7 @@ from transformers import (
 from langchain_huggingface import HuggingFacePipeline, ChatHuggingFace
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import Runnable
 import torch
 
 
@@ -99,21 +100,53 @@ def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct") -> ChatHuggin
     return ChatHuggingFace(llm=llm, tokenizer=tokenizer)
 
 
-def generate_text(
-    chat_model: ChatHuggingFace,
-    system_prompt: str,
-    user_prompt: str,
-) -> str:
-    """
-    Generate text using a chat model with system and user prompts.
+# Create a chat prompt template with system and user message roles.
+# This follows the standard chat structure where the system message
+# provides context and the user message is the actual query.
+_PROMPT_TEMPLATE = ChatPromptTemplate.from_messages(
+    [
+        ("system", "{system}"),
+        ("user", "{user}"),
+    ]
+)
 
-    Creates a prompt template with system and user messages, builds
-    a processing chain through LangChain Expression Language (LCEL),
-    and generates a response from the chat model.
+
+def setup_chain(chat_model: ChatHuggingFace) -> Runnable:
+    """
+    Set up a LangChain Expression Language (LCEL) chain for chat-based text generation.
+
+    Creates a processing chain that takes system and user prompts,
+    formats them using a chat prompt template, passes them through
+    the provided chat model, and parses the output into a clean string.
 
     Args:
         chat_model: A LangChain ChatHuggingFace model instance for
                    generating text responses.
+    Returns:
+        chain: An LCEL chain that processes prompts and generates
+               text responses.
+    """
+    # Create the LCEL chain: Template -> Model -> String Output
+    # The chat_model automatically applies the tokenizer's chat template
+    # formatting to ensure proper message structure for the model.
+    # StrOutputParser converts the model output to a clean string.
+    return _PROMPT_TEMPLATE | chat_model | StrOutputParser()
+
+
+def generate_text(
+    chain: Runnable,
+    system_prompt: str,
+    user_prompt: str,
+) -> str:
+    """
+    Generate text using a pre-built LCEL chain with system and user prompts.
+
+    Invokes the provided chain with system and user messages to generate
+    a text response. The chain should be created once using setup_chain()
+    and reused across multiple calls for better performance.
+
+    Args:
+        chain: A pre-built LCEL Runnable chain created from setup_chain().
         system_prompt: The system prompt that sets the behavior and
                       context for the model.
         user_prompt: The user input prompt to generate a response for.
@@ -122,26 +155,8 @@ def generate_text(
         str: The generated text response from the model, stripped of
              leading/trailing whitespace.
     """
-    # Create a chat prompt template with system and user message roles.
-    # This follows the standard chat structure where the system message
-    # provides context and the user message is the actual query.
-    prompt_template = ChatPromptTemplate.from_messages(
-        [
-            ("system", "{system}"),
-            ("user", "{user}"),
-        ]
-    )
-
-    # Create the LCEL chain: Template -> Model -> String Output
-    # The chat_model automatically applies the tokenizer's chat template
-    # formatting to ensure proper message structure for the model.
-    # StrOutputParser converts the model output to a clean string.
-    chain = prompt_template | chat_model | StrOutputParser()
 
     # Invoke the chain with the provided prompts to generate a response.
     # The template fills in the {system} and {user} placeholders with
     # the actual prompt values.
-    response = chain.invoke({"system": system_prompt, "user": user_prompt})
-
-    # Return the response with leading/trailing whitespace removed
-    return response.strip()
+    return chain.invoke({"system": system_prompt, "user": user_prompt}).strip()
