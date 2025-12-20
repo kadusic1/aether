@@ -11,7 +11,15 @@ from langchain_core.runnables import Runnable
 import torch
 
 
-def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct") -> ChatHuggingFace:
+def load_model(
+    model_id: str = "meta-llama/Llama-3.1-8B-Instruct",
+    temperature: float = 0.8,
+    top_p: float = 0.85,
+    max_new_tokens: int = 650,
+    do_sample: bool = True,
+    repetition_penalty: float = 1.1,
+    return_full_text: bool = False,
+) -> ChatHuggingFace:
     """
     Load a pretrained language model with 4-bit quantization wrapped in LangChain.
 
@@ -23,6 +31,19 @@ def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct") -> ChatHuggin
     Args:
         model_id: Model identifier on Hugging Face Hub. Defaults to
                   meta-llama/Llama-3.1-8B-Instruct
+        temperature: Controls randomness in generation. Lower values (0.1) are
+                    focused/stable, higher values (0.8+) are creative/diverse.
+                    Defaults to 0.8.
+        top_p: Nucleus sampling parameter. Only considers the top p% of most
+              likely tokens. Defaults to 0.85.
+        max_new_tokens: The maximum number of new tokens to generate (excluding
+                       input). Defaults to 650.
+        do_sample: Whether to use sampling-based decoding. Must be True to enable
+                  temperature and top_p effects. Defaults to True.
+        repetition_penalty: Penalizes repeated phrases/words. Values > 1.0
+                           discourage repetition. Defaults to 1.1.
+        return_full_text: Whether to return the original prompt with the generated
+                         text. Defaults to False (return only generated text).
 
     Returns:
         ChatHuggingFace: A LangChain ChatHuggingFace object that wraps
@@ -78,18 +99,12 @@ def load_model(model_id: str = "meta-llama/Llama-3.1-8B-Instruct") -> ChatHuggin
         "text-generation",
         model=model,
         tokenizer=tokenizer,
-        # Controls randomness: 0.1 is focused/stable, 0.8+ is creative/diverse.
-        temperature=0.8,
-        # Nucleus sampling: only considers the top 85% of most likely tokens.
-        top_p=0.85,
-        # The maximum number of new tokens to generate (excluding input).
-        max_new_tokens=650,
-        # Must be True to enable the sampling-based decoding (temp/top_p).
-        do_sample=True,
-        # Discourages the model from repeating the same phrases or words.
-        repetition_penalty=1.1,
-        # Only return the newly generated text, without the original prompt.
-        return_full_text=False,
+        temperature=temperature,
+        top_p=top_p,
+        max_new_tokens=max_new_tokens,
+        do_sample=do_sample,
+        repetition_penalty=repetition_penalty,
+        return_full_text=return_full_text,
     )
 
     # Wrap the native Transformers pipeline into a LangChain-compatible object.
