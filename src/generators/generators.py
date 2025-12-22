@@ -8,7 +8,18 @@ from prompts import (
 
 
 class NoVideoSimpleContentGenerator(ContentGeneratorTemplate):
+    """Content generator that creates headlines and short-form items without videos.
+
+    This generator produces viral headlines and short-form content items
+    suitable for psychology/manipulation themed content channels.
+    """
+
     def generate_headline(self) -> str:
+        """Generate a viral headline for the content.
+
+        Returns:
+            str: A viral headline suitable for a psychology/manipulation channel.
+        """
         return generate_text(
             self.chain,
             system_prompt_headline,
@@ -16,6 +27,14 @@ class NoVideoSimpleContentGenerator(ContentGeneratorTemplate):
         )
 
     def generate_content(self, headline: str) -> str:
+        """Generate short-form content items based on the headline.
+
+        Args:
+            headline (str): The headline to base content generation on.
+
+        Returns:
+            str: The generated short-form content items.
+        """
         return generate_text(
             self.chain,
             system_prompt_content,
@@ -30,4 +49,10 @@ class NoVideoSimpleContentGenerator(ContentGeneratorTemplate):
         # )
 
     def generate_short_video(self, headline: str, content: str):
+        """No-op implementation since this generator doesn't produce videos.
+
+        Args:
+            headline (str): The headline (unused).
+            content (str): The content (unused).
+        """
         pass
