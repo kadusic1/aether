@@ -69,23 +69,19 @@ def load_model(
     # Load tokenizer from pretrained model
     # model_id: Identifier for the pretrained model on Hugging Face Hub
     # use_fast=True: Use the faster Rust-based tokenizer if available
-    # local_files_only=True: Only use cached files, don't download
     tokenizer = AutoTokenizer.from_pretrained(
         model_id,
         use_fast=True,
-        local_files_only=True,
     )
 
     # Load pretrained causal language model with 4-bit quantization
     # model_id: Identifier for the pretrained model on Hugging Face Hub
     # quantization_config=bnb_config: Apply the 4-bit quantization config
     # device_map="cuda": Load model onto GPU (CUDA device) for inference
-    # local_files_only=True: Only use cached files, don't download
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb_config,
-        device_map="cuda",
-        local_files_only=True,
+        device_map="auto",
     )
 
     # Set model to evaluation mode to disable dropout and batch
