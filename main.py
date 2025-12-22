@@ -1,10 +1,13 @@
 from src import (
     load_model,
     generate_text,
+    setup_chain,
+)
+
+from prompts import (
     system_prompt_headline,
     system_prompt_content,
     system_prompt_review,
-    setup_chain,
 )
 
 
