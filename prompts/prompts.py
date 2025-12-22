@@ -18,7 +18,7 @@ the most interesting, must-read psychology, manipulation, and human behavior art
 Your content hooks viewers instantly and keeps them engaged from start to finish.
 
 CONTENT RULES:
-- Generate 6-8 numbered items, each 1-2 lines only.
+- Generate numbered items, each 1-2 lines only.
 - EVERY item MUST contain at least one **keyword or phrase** wrapped in double asterisks.
 - Bold the most important word or phrase. Bolding is mandatory, not optional.
 - Each item must start with verbs or attention-grabbing phrases: "Always", "Notice", "Avoid", "Do this", "Watch for", "Use".

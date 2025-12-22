@@ -1,14 +1,5 @@
-from src import (
-    load_model,
-    generate_text,
-    setup_chain,
-)
-
-from prompts import (
-    system_prompt_headline,
-    system_prompt_content,
-    system_prompt_review,
-)
+from src.utils import load_model, setup_chain
+from src.generators import NoVideoSimpleContentGenerator
 
 
 def main():
@@ -20,34 +11,9 @@ def main():
     # Reuse this chain across multiple generate_text calls.
     chain = setup_chain(llm)
 
-    # Step 1: Generate headline using the model
-    # system_prompt_headline: Sets model behavior for headline generation
-    # User prompt: Specifies the task of creating viral headlines
-    headline = generate_text(
-        chain,
-        system_prompt_headline,
-        "Generate one viral headline for a psychology/manipulation channel.",
-    )
-    print("Headline:\n", headline)
-
-    # Step 2: Generate content based on the generated headline
-    # Create a prompt that includes the headline for consistency
-    # system_prompt_content: Sets model behavior for content generation
-    # User prompt: Specifies creating 6-8 short-form items
-    content_prompt = (
-        f"Create 6-8 viral short-form items with the headline: '{headline}'"
-    )
-    content = generate_text(chain, system_prompt_content, content_prompt)
-    print("\nGenerated Content:\n", content)
-
-    # Step 3: Review and refine the generated content
-    # system_prompt_review: Sets model behavior for content improvement
-    # User prompt: Includes the content and requests improvement
-    review_prompt = (
-        f"Here is the content:\n{content}\nImprove it according to the rules."
-    )
-    refined_content = generate_text(chain, system_prompt_review, review_prompt)
-    print("\nRefined Content:\n", refined_content)
+    simple_generator = NoVideoSimpleContentGenerator(chain)
+    results = simple_generator.generate()
+    print(results)
 
 
 if __name__ == "__main__":

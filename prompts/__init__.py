@@ -6,7 +6,7 @@ from .prompts import (
     system_prompt_review,
 )
 
-all = [
+__all__ = [
     "system_prompt_headline",
     "system_prompt_content",
     "system_prompt_review",
