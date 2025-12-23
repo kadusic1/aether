@@ -2,7 +2,6 @@
 from .interfaces import HeadlineStrategy, ContentStrategy, VideoStrategy
 
 __all__ = [
-    "ContentEngineTemplate",
     "HeadlineStrategy",
     "ContentStrategy",
     "VideoStrategy",
