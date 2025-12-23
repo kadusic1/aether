@@ -1,5 +1,6 @@
 from src.utils import load_model, setup_chain
-from src.generators import NoVideoSimpleContentGenerator
+from src.engines.factory import ContentEngineFactory
+from src.constants import EngineType
 
 
 def main():
@@ -11,7 +12,11 @@ def main():
     # Reuse this chain across multiple generate_text calls.
     chain = setup_chain(llm)
 
-    simple_generator = NoVideoSimpleContentGenerator(chain)
+    simple_generator = ContentEngineFactory.create(
+        EngineType.PSYCHOLOGY,
+        chain,
+    )
+
     results = simple_generator.generate()
     print(results)
 
