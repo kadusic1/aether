@@ -1,6 +1,4 @@
-from src.utils import load_model, setup_chain
-from src.engines.factory import ContentEngineFactory
-from src.constants import EngineType
+from src.llm import load_model, setup_chain, generate_text
 
 
 def main():
@@ -12,13 +10,12 @@ def main():
     # Reuse this chain across multiple generate_text calls.
     chain = setup_chain(llm)
 
-    simple_generator = ContentEngineFactory.create(
-        EngineType.PSYCHOLOGY,
+    example = generate_text(
         chain,
+        system_prompt="You are a helpful assistant.",
+        user_prompt="What is Aether?",
     )
-
-    results = simple_generator.generate()
-    print(results)
+    print(example)
 
 
 if __name__ == "__main__":
