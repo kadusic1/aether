@@ -1,4 +1,4 @@
-from src.llm import load_model, setup_chain, generate_text
+from src.llm import load_model
 
 
 def main():
@@ -6,15 +6,7 @@ def main():
     # tokenizer from Hugging Face Hub, wrapped in LangChain (ChatHuggingFace)
     llm = load_model()
 
-    # Set up the LCEL chain once for performance optimization.
-    # Reuse this chain across multiple generate_text calls.
-    chain = setup_chain(llm)
-
-    example = generate_text(
-        chain,
-        system_prompt="You are a helpful assistant.",
-        user_prompt="What is Aether?",
-    )
+    example = llm.invoke("What is 2+2?")
     print(example)
 
 
