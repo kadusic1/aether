@@ -1,6 +1,6 @@
 # src/__init__.py
-from . import llm
+from . import models
 
 __all__ = [
-    "llm",
+    "models",
 ]

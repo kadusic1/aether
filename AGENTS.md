@@ -50,7 +50,7 @@ aether/
 ├── main.py              # Entry point (if __name__ guard)
 ├── src/                 # Application logic
 │   ├── __init__.py      # Facade re-exports with __all__
-│   ├── llm.py           # LLM loading/configuration
+│   ├── models.py           # Models loading/configuration
 │   ├── state.py         # Workflow state types (TypedDict)
 │   ├── workflow.py      # LangGraph workflow construction
 │   └── agents/          # Individual agent node modules
@@ -84,10 +84,10 @@ from pathlib import Path
 
 from langchain_ollama import ChatOllama
 
-from src.llm import load_chat_model
+from src.models import load_chat_model
 ```
 
-- **Cross-package**: absolute imports (`from src.llm import ...`).
+- **Cross-package**: absolute imports (`from src.models import ...`).
 - **Intra-package**: relative imports (`from .psychology import ...`).
 - **Multi-symbol imports**: parenthesized, one symbol per line.
 
@@ -99,7 +99,7 @@ from src.llm import load_chat_model
 | Variables          | `snake_case`  | `model_name`             |
 | Constants          | `UPPER_SNAKE` | `DEFAULT_TEMPERATURE`    |
 | Classes            | `PascalCase`  | `WorkflowState`          |
-| Modules/packages   | `snake_case`  | `llm.py`, `agents/`      |
+| Modules/packages   | `snake_case`  | `models.py`, `agents/`      |
 | Test functions     | `test_*`      | `test_load_model`        |
 
 Prompt template variables use `snake_case` (they are data, not
