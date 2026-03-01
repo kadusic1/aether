@@ -27,19 +27,6 @@ uv run ruff format --check .  # Check formatting without writing
 Configure in `pyproject.toml` under `[tool.ruff]`. Always run
 `ruff check` and `ruff format` before committing.
 
-## Testing
-
-Test framework: pytest (with `pytest-asyncio` for async tests).
-
-```bash
-uv run pytest                                       # All tests
-uv run pytest tests/test_llm.py                     # Single file
-uv run pytest tests/test_llm.py::test_load_model    # Single function
-uv run pytest tests/test_llm.py::TestLlm::test_load_model  # Class method
-uv run pytest -k "keyword"                          # Match keyword
-uv run pytest -v                                    # Verbose output
-```
-
 Tests live in `tests/` mirroring `src/`. Files: `test_<module>.py`.
 Functions: `test_<behavior>`.
 
