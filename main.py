@@ -1,4 +1,4 @@
-from src.llm import load_chat_model
+from src.models import load_chat_model
 
 
 def main():
