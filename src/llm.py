@@ -1,5 +1,6 @@
 from langchain_ollama import ChatOllama
 
+
 def load_model():
     """
     Loads and configures the ChatOllama language model.
