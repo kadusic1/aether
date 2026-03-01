@@ -84,7 +84,7 @@ from pathlib import Path
 
 from langchain_ollama import ChatOllama
 
-from src.llm import load_model
+from src.llm import load_chat_model
 ```
 
 - **Cross-package**: absolute imports (`from src.llm import ...`).
@@ -95,7 +95,7 @@ from src.llm import load_model
 
 | Element            | Convention    | Example                  |
 |--------------------|---------------|--------------------------|
-| Functions/methods  | `snake_case`  | `load_model()`           |
+| Functions/methods  | `snake_case`  | `load_chat_model()`           |
 | Variables          | `snake_case`  | `model_name`             |
 | Constants          | `UPPER_SNAKE` | `DEFAULT_TEMPERATURE`    |
 | Classes            | `PascalCase`  | `WorkflowState`          |
@@ -118,7 +118,7 @@ Use type hints on all function signatures. Python 3.13 syntax:
 Google style. Opening `"""` on its own line for multi-line:
 
 ```python
-def load_model(model_name: str = "llama3.1") -> ChatOllama:
+def load_chat_model(model_name: str = "llama3.1") -> ChatOllama:
     """
     Load and configure the ChatOllama language model.
 
