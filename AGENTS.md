@@ -1,8 +1,8 @@
 # AGENTS.md — Aether
 
 AI-powered viral short-form content generation engine built on
-LangGraph with Ollama for local inference. Python 3.13,
-managed with `uv`.
+LangGraph with Ollama, Stable Diffusion, and Qwen TTS for
+local inference. Python 3.13, managed with `uv`.
 
 ## Build & Run
 
@@ -105,7 +105,7 @@ Use type hints on all function signatures. Python 3.13 syntax:
 Google style. Opening `"""` on its own line for multi-line:
 
 ```python
-def load_chat_model(model_name: str = "llama3.1") -> ChatOllama:
+def load_chat_model(model_name: str = "llama3.1:8b-instruct-q4_K_M") -> ChatOllama:
     """
     Load and configure the ChatOllama language model.
 
