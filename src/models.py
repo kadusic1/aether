@@ -39,6 +39,22 @@ def load_tts_model(
 
     Returns:
         Configured Qwen3TTSModel instance.
+    Example:
+        import soundfile as sf
+
+        tts = load_tts_model()
+        char = {
+            "name": "Wise Old Wizard",
+            "text": "Young one, the path to wisdom is paved with patience and perseverance.",
+            "instruct": "Elderly male voice, deep and gravelly, speaking slowly with wisdom and authority.",
+            "language": "English"
+        }
+        wavs, sr = tts.generate_voice_design(
+            text=char['text'],
+            language=char['language'],
+            instruct=char['instruct'],
+        )
+        sf.write("test.wav", wavs[0], sr)
     """
     return Qwen3TTSModel.from_pretrained(
         model_name,
