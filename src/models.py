@@ -4,6 +4,7 @@ from qwen_tts import Qwen3TTSModel
 import torch
 from diffusers import StableDiffusionPipeline
 from PIL import Image
+import gc
 
 
 def load_chat_model(
@@ -187,3 +188,23 @@ def generate_image_long_prompt(
         prompt_embeds=prompt_embeds,
         negative_prompt_embeds=negative_prompt_embeds,
     )
+
+
+def unload_from_gpu(*models: object) -> None:
+    """
+    Move model(s) off GPU and release VRAM.
+    Handles both nn.Module instances and wrapper objects
+    like Qwen3TTSModel (which store the real model in
+    .model attribute).
+    Args:
+        *models: Model objects to unload and delete.
+    """
+    for model in models:
+        # Unwrap: Qwen3TTSModel stores real model in .model
+        inner = getattr(model, "model", model)
+        if hasattr(inner, "to"):
+            inner.to("cpu")
+        del inner
+    del models
+    gc.collect()
+    torch.cuda.empty_cache()
