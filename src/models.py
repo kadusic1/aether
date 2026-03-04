@@ -8,7 +8,7 @@ import gc
 
 
 def load_chat_model(
-    model_name: str = "llama3.1:8b-instruct-q4_K_M",
+    model_name: str = "qwen3:8b-q4_k_m",
 ) -> ChatOllama:
     """
     Load and configure the ChatOllama language model.
