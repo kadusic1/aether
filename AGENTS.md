@@ -105,7 +105,7 @@ Use type hints on all function signatures. Python 3.13 syntax:
 Google style. Opening `"""` on its own line for multi-line:
 
 ```python
-def load_chat_model(model_name: str = "llama3.1:8b-instruct-q4_K_M") -> ChatOllama:
+def load_chat_model(model_name: str = "qwen3:8b-q4_k_m") -> ChatOllama:
     """
     Load and configure the ChatOllama language model.
 
