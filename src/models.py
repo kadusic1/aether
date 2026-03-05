@@ -23,7 +23,6 @@ def load_chat_model(
         model=model_name,
         temperature=0.8,
         top_p=0.85,
-        num_predict=650,
         keep_alive=False,
     )
 
