@@ -27,7 +27,7 @@ uv run ruff format --check .  # Check formatting without writing
 Configure in `pyproject.toml` under `[tool.ruff]`. Always run
 `ruff check` and `ruff format` before committing.
 
-Tests live in `tests/` mirroring `src/`. Files: `test_<module>.py`.
+Tests go in `tests/` mirroring `src/`. Files: `test_<module>.py`.
 Functions: `test_<behavior>`.
 
 ## Project Structure
@@ -37,18 +37,18 @@ aether/
 ├── main.py              # Entry point (if __name__ guard)
 ├── src/                 # Application logic
 │   ├── __init__.py      # Facade re-exports with __all__
-│   ├── models.py           # Models loading/configuration
+│   ├── models.py        # Models loading/configuration
+│   ├── services.py      # External service wrappers
 │   ├── state.py         # Workflow state types (TypedDict)
 │   ├── workflow.py      # LangGraph workflow construction
-│   └── agents/          # Individual agent node modules
-├── prompts/             # Prompt templates (one file per niche)
-│   ├── __init__.py      # Re-exports prompt strings
-│   └── psychology.py    # Psychology niche prompts
-├── tests/               # Test files mirror src/ structure
+│   └── nodes/           # Individual workflow node modules
+├── niche_config/        # Niche definitions (one file per niche)
+│   ├── __init__.py      # Niche dataclass and factory
+│   └── psychology.py    # Psychology niche search queries
 └── docs/                # Research & reference documentation
 ```
 
-`src/` holds logic; `prompts/` holds data. Keep them separate.
+`src/` holds logic; `niche_config/` holds data. Keep them separate.
 
 ## Code Style
 
@@ -85,8 +85,8 @@ from src.models import load_chat_model
 | Functions/methods  | `snake_case`  | `load_chat_model()`           |
 | Variables          | `snake_case`  | `model_name`             |
 | Constants          | `UPPER_SNAKE` | `DEFAULT_TEMPERATURE`    |
-| Classes            | `PascalCase`  | `WorkflowState`          |
-| Modules/packages   | `snake_case`  | `models.py`, `agents/`      |
+| Classes            | `PascalCase`  | `VideoState`             |
+| Modules/packages   | `snake_case`  | `models.py`, `nodes/`       |
 | Test functions     | `test_*`      | `test_load_model`        |
 
 Prompt template variables use `snake_case` (they are data, not
@@ -123,8 +123,6 @@ Every public function and class must have a docstring.
 
 - Raise specific exceptions, never bare `except:`.
 - Catch the narrowest exception type possible.
-- Use custom exception classes in `src/exceptions.py` when
-  domain-specific errors are needed.
 - Always include context in error messages.
 - Chain exceptions with `raise ... from e`.
 
