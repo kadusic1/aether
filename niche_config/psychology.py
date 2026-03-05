@@ -1,5 +1,7 @@
 psychology_trending_search_queries = [
-    "dark psychology tricks people don't know",
-    "mind blowing human behavior facts",
-    "cognitive biases explained simply",
+    "human behavior paradoxes #viral #trending",
+    "dark psychology #viral #trending",
+    "manipulation techniques #viral #trending",
+    "personal trait psychology facts #viral #trending",
+    "relationship psychology #viral #trending",
 ]
