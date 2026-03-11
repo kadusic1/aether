@@ -1,14 +1,73 @@
-from src.models import load_chat_model
+import asyncio
+
+from langchain_core.messages import HumanMessage
+
+from niche_config import niche_factory
+from src.state import VideoState
+from src.workflow import build_workflow
+import time
 
 
-def main():
-    # Load the pretrained language model with 4-bit quantization and
-    # tokenizer from Hugging Face Hub, wrapped in LangChain (ChatHuggingFace)
-    llm = load_chat_model()
+async def main() -> None:
+    """
+    Entry point for the Aether workflow.
 
-    example = llm.invoke("What is 2+2?")
-    print(example)
+    Runs an interactive chat loop that processes user
+    input through the full workflow pipeline:
+    extract_links -> search_router -> search_node ->
+    scraper -> intent_router.
+    """
+    print("Initializing Aether Workflow...")
+    graph = build_workflow()
+
+    # Initialize state with all required fields
+    state: VideoState = {
+        "niche": niche_factory("psychology"),
+        "messages": [],
+        "sources": [],
+        "sources_overview": "",
+        "intent": "",
+        "use_search": False,
+    }
+
+    print("\n--- Chat Started. Type 'quit' or 'exit' to stop. ---")
+    print("Propose an idea or ask to find trending topics.\n")
+
+    while True:
+        user_input = input("You: ").strip()
+        if user_input.lower() in ["quit", "exit"]:
+            print("Goodbye!")
+            break
+        if not user_input:
+            continue
+
+        start = time.perf_counter()
+        print("\nProcessing: extracting links, routing, searching, scraping...")
+        state["messages"].append(
+            HumanMessage(content=user_input),
+        )
+
+        # Reset per-turn transient fields so they
+        # don't carry over from previous turns.
+        state["sources"] = []
+        state["sources_overview"] = ""
+        state["intent"] = ""
+        state["use_search"] = False
+
+        # Invoke the graph
+        state = await graph.ainvoke(state)  # type: ignore
+
+        # Debug output for the pipeline results
+        print(f"\n  Intent:  {state['intent']}")
+        print(f"  Sources: {state['sources']}")
+        overview = state["sources_overview"]
+        if overview:
+            print(f"  Overview: {overview}...")
+        print()
+
+        end = time.perf_counter()
+        print(f"  Processing Time: {end - start:.2f} seconds")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
