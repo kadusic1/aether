@@ -35,15 +35,22 @@ Functions: `test_<behavior>`.
 ```
 aether/
 ├── main.py              # Entry point (if __name__ guard)
+├── pyproject.toml       # Python package configuration (uv)
+├── uv.lock              # Dependency lockfile
+├── docker-compose.yml   # Containerized services/dependencies
+├── config/              # Application configuration
+│   └── settings.yml     # Configuration settings
 ├── src/                 # Application logic
 │   ├── __init__.py      # Facade re-exports with __all__
 │   ├── models.py        # Models loading/configuration
 │   ├── services.py      # External service wrappers
 │   ├── state.py         # Workflow state types (TypedDict)
 │   ├── workflow.py      # LangGraph workflow construction
-│   └── nodes/           # Individual workflow node modules
+│   ├── nodes/           # Individual workflow node modules
+│   └── tools/           # Custom tools and utilities
 ├── niche_config/        # Niche definitions (one file per niche)
 │   ├── __init__.py      # Niche dataclass and factory
+│   ├── common.py        # Shared configuration and base system prompts
 │   └── psychology.py    # Psychology niche search queries
 └── docs/                # Research & reference documentation
 ```
