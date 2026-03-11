@@ -7,7 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "accelerate>=1.12.0",
     "bitsandbytes>=0.49.2",
+    "crawl4ai>=0.8.0",
     "diffusers>=0.36.0",
+    "langchain>=1.2.10",
     "langchain-community>=0.4.1",
     "langchain-core>=1.2.16",
     "langchain-huggingface>=1.2.0",
