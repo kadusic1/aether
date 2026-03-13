@@ -15,16 +15,14 @@ async def search_web(
         query: The search query to execute.
         num_results: The number of search results to return (max is 15).
         time_range: The time range for the search (e.g., "day", "week", "month", "year", None).
-        None should almost never be used.
     Returns:
         A string representation of the search results including URLs.
     """
     searx = get_searx()
-    results = await searx.aresults(
-        query,
-        num_results=min(num_results, 15),
-        time_range=time_range,
-    )
+    search_params = {"num_results": min(num_results, 15)}
+    if time_range is not None:
+        search_params["time_range"] = time_range
+    results = await searx.aresults(query, **search_params)
     print(f"Search results for '{query}':", flush=True)
     print("Time range:", time_range, flush=True)
     print("Num Results:", num_results, flush=True)
