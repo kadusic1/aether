@@ -5,26 +5,222 @@ import torch
 from diffusers import StableDiffusionPipeline
 from PIL import Image
 import gc
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dataclasses import dataclass, field
+from langchain_core.language_models.chat_models import BaseChatModel
+from typing import Any, Callable
+from langchain_core.runnables import Runnable
 
 
-def load_chat_model(
-    model_name: str = "qwen3:8b-q4_k_m",
-) -> ChatOllama:
+@dataclass(frozen=True)
+class ProviderConfig:
+    """Holds provider-specific configuration for a chat model.
+
+    Attributes:
+        provider: The name of the provider (e.g. "google", "ollama").
+        model: The underlying LangChain chat model instance.
+        reasoning_kwarg: The provider's kwarg name for reasoning control.
+        Callers always pass ``reasoning=True/False`` to the adapter,
+        which translates it to the provider-specific kwarg.
+        content_field: The field where the actual string content lives in the
+        raw response.
+        reasoning_encoder: Converts a plain bool to the value the provider
+        expects (e.g. True -> "high" for Google).
+        is_structured: Whether the model is wrapped for structured output.
     """
-    Load and configure the ChatOllama language model.
+
+    provider: str
+    model: BaseChatModel | Runnable
+    reasoning_kwarg: str
+    content_field: str
+    reasoning_encoder: Callable[[bool], Any] = field(default=lambda v: v)
+    is_structured: bool = False
+
+
+class ChatModelAdapter(Runnable):
+    """Normalizes provider differences for LangChain chat models.
+
+    Callers always pass ``reasoning=``, and the adapter translates
+    it to the provider-specific kwarg transparently. Also normalizes
+    invoke method response content to a plain string if the provider returns
+    something more complex (e.g. list of content blocks).
 
     Args:
-        model_name: The Ollama model identifier.
+        config: Provider configuration containing the model and
+            its reasoning kwarg name.
+    """
+
+    def __init__(self, config: ProviderConfig) -> None:
+        self._provider = config.provider
+        self._model = config.model
+        self._reasoning_kwarg = config.reasoning_kwarg
+        self._is_structured = config.is_structured
+        self._content_field = config.content_field
+        self._reasoning_encoder = config.reasoning_encoder
+
+    def _translate(self, kwargs) -> dict:
+        """Handles different reasoning/thinking kwargs across providers.
+        E.g. Gemini uses ``thinking_level`` instead of ``reasoning``.
+        The _translate method allows all providers to activate reasoning/thinking
+        with the ``reasoning`` kwarg.
+
+        Returns:
+            A new dict with ``reasoning`` replaced by the
+            provider-specific kwarg name, if present.
+        """
+        if "reasoning" in kwargs:
+            if not isinstance(kwargs["reasoning"], bool):
+                raise ValueError(
+                    f"Invalid reasoning value: {kwargs['reasoning']}. "
+                    "Expected a boolean.",
+                )
+            # Use copy to avoid mutating the original kwargs dict passed by the caller.
+            kwargs = kwargs.copy()
+            # reasoning_encoder allows providers to have custom mappings
+            # (e.g. Gemini's "thinking_level").
+            kwargs[self._reasoning_kwarg] = self._reasoning_encoder(
+                kwargs.pop("reasoning")
+            )
+
+        return kwargs
+
+    def _normalize(self, response) -> str:
+        """Normalize the model invoke method response content to a string if it's
+        something else (e.g. list). Avoids normalization on structured output responses.
+
+        Args:
+            response: Raw response from the underlying model invoke method.
+
+        Returns:
+            Normalized response with content as a string.
+        """
+        if self._is_structured:
+            return response
+
+        return getattr(response, self._content_field, response)
+
+    def invoke(self, *args, **kwargs) -> str:
+        """Normalized and translated invoke method for the underlying model.
+        See the docstrings of ``_translate`` and ``_normalize`` for more
+        details.
+
+        Returns:
+            Normalized and translated invoke response.
+        """
+        return self._normalize(
+            self._model.invoke(*args, **self._translate(kwargs))
+        )
+
+    async def ainvoke(self, *args, **kwargs) -> str:
+        """Normalized and translated ainvoke method for the underlying model.
+        See the docstrings of ``_translate`` and ``_normalize`` for more
+        details.
+
+        Returns:
+            Normalized and translated invoke response.
+        """
+        return self._normalize(
+            await self._model.ainvoke(*args, **self._translate(kwargs))
+        )
+
+    def with_structured_output(self, *args, **kwargs) -> "ChatModelAdapter":
+        """Wraps structured output to obtain provider properties.
+
+        Returns:
+            A new ``ChatModelAdapter`` wrapping the structured-output
+            runnable, with the same provider config preserved.
+        """
+        return ChatModelAdapter(
+            ProviderConfig(
+                provider=self._provider,
+                model=self._model.with_structured_output(*args, **kwargs),
+                reasoning_kwarg=self._reasoning_kwarg,
+                is_structured=True,
+                content_field=self._content_field,
+                reasoning_encoder=self._reasoning_encoder,
+            )
+        )
+
+    def stream(self, input, config=None, **kwargs):
+        """Explicitly wrap stream method."""
+        for chunk in self._model.stream(
+            input, config=config, **self._translate(kwargs)
+        ):
+            yield self._normalize(chunk)
+
+    async def astream(self, input, config=None, **kwargs):
+        """Explicitly wrap astream method."""
+        async for chunk in self._model.astream(
+            input, config=config, **self._translate(kwargs)
+        ):
+            yield self._normalize(chunk)
+
+    def batch(self, inputs, config=None, **kwargs) -> list[str]:
+        """Explicitly wrap batch method."""
+        responses = self._model.batch(
+            inputs, config=config, **self._translate(kwargs)
+        )
+        return [self._normalize(r) for r in responses]
+
+    async def abatch(self, inputs, config=None, **kwargs) -> list[str]:
+        """Explicitly wrap abatch method."""
+        responses = await self._model.abatch(
+            inputs, config=config, **self._translate(kwargs)
+        )
+        return [self._normalize(r) for r in responses]
+
+    def __getattr__(self, name: str):
+        """Proxies attribute access to the underlying model.
+
+        Args:
+            name: Attribute name to look up on the wrapped model.
+
+        Returns:
+            The attribute value from the underlying model.
+        """
+        return getattr(self._model, name)
+
+
+def load_chat_model(provider: str = "google") -> ChatModelAdapter:
+    """Loads a provider-specific chat model, chosen by environment.
+
+    Available providers:
+        - **Google**: gemini-3.1-flash-lite-preview
+        - **Ollama**: qwen3:8b-q4_k_m
 
     Returns:
-        Configured ChatOllama instance.
+        A configured ``ChatModelAdapter`` for the detected provider.
     """
-    return ChatOllama(
-        model=model_name,
-        temperature=0.8,
-        top_p=0.85,
-        keep_alive=False,
-    )
+    if provider == "google" and os.getenv("GOOGLE_API_KEY"):
+        return ChatModelAdapter(
+            ProviderConfig(
+                provider="google",
+                model=ChatGoogleGenerativeAI(
+                    model="gemini-3.1-flash-lite-preview",
+                    max_retries=6,
+                    temperature=0.8,
+                    top_p=0.85,
+                ),
+                reasoning_kwarg="thinking_level",
+                content_field="text",
+                reasoning_encoder=lambda v: "high" if v else "medium",
+            )
+        )
+    else:
+        return ChatModelAdapter(
+            ProviderConfig(
+                provider="ollama",
+                model=ChatOllama(
+                    model="qwen3:8b-q4_k_m",
+                    keep_alive=False,
+                    temperature=0.8,
+                    top_p=0.85,
+                ),
+                reasoning_kwarg="reasoning",
+                content_field="content",
+            )
+        )
 
 
 def load_tts_model(

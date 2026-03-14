@@ -46,4 +46,4 @@ async def scraper(state: VideoState) -> dict:
         ],
         reasoning=True,
     )
-    return {"sources_overview": response.content}
+    return {"sources_overview": response}
