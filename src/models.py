@@ -23,19 +23,23 @@ class ProviderConfig:
         reasoning_kwarg: The provider's kwarg name for reasoning control.
         Callers always pass ``reasoning=True/False`` to the adapter,
         which translates it to the provider-specific kwarg.
-        content_field: The field where the actual string content lives in the
-        raw response.
+        content_extractor: Function to extract the text content from the model's
+        raw response. It is needed because different providers return responses
+        in different formats
         reasoning_encoder: Converts a plain bool to the value the provider
         expects (e.g. True -> "high" for Google).
         is_structured: Whether the model is wrapped for structured output.
+        supports_reasoning: Whether the model supports reasoning. When false
+        the adapter strips the reasoning kwarg.
     """
 
     provider: str
     model: BaseChatModel | Runnable
     reasoning_kwarg: str
-    content_field: str
+    content_extractor: Callable[[Any], str] = field(default=lambda r: r.content)
     reasoning_encoder: Callable[[bool], Any] = field(default=lambda v: v)
     is_structured: bool = False
+    supports_reasoning: bool = True
 
 
 class ChatModelAdapter(Runnable):
@@ -56,8 +60,9 @@ class ChatModelAdapter(Runnable):
         self._model = config.model
         self._reasoning_kwarg = config.reasoning_kwarg
         self._is_structured = config.is_structured
-        self._content_field = config.content_field
+        self._content_extractor = config.content_extractor
         self._reasoning_encoder = config.reasoning_encoder
+        self._supports_reasoning = config.supports_reasoning
 
     def _translate(self, kwargs) -> dict:
         """Handles different reasoning/thinking kwargs across providers.
@@ -77,11 +82,16 @@ class ChatModelAdapter(Runnable):
                 )
             # Use copy to avoid mutating the original kwargs dict passed by the caller.
             kwargs = kwargs.copy()
-            # reasoning_encoder allows providers to have custom mappings
-            # (e.g. Gemini's "thinking_level").
-            kwargs[self._reasoning_kwarg] = self._reasoning_encoder(
+            if self._supports_reasoning:
+                # reasoning_encoder allows providers to have custom mappings
+                # (e.g. Gemini's "thinking_level").
+                kwargs[self._reasoning_kwarg] = self._reasoning_encoder(
+                    kwargs.pop("reasoning")
+                )
+            else:
+                # If the provider doesn't support reasoning, we remove the reasoning
+                # kwarg.
                 kwargs.pop("reasoning")
-            )
 
         return kwargs
 
@@ -98,7 +108,7 @@ class ChatModelAdapter(Runnable):
         if self._is_structured:
             return response
 
-        return getattr(response, self._content_field, response)
+        return self._content_extractor(response)
 
     def invoke(self, *args, **kwargs) -> str:
         """Normalized and translated invoke method for the underlying model.
@@ -137,8 +147,9 @@ class ChatModelAdapter(Runnable):
                 model=self._model.with_structured_output(*args, **kwargs),
                 reasoning_kwarg=self._reasoning_kwarg,
                 is_structured=True,
-                content_field=self._content_field,
+                content_extractor=self._content_extractor,
                 reasoning_encoder=self._reasoning_encoder,
+                supports_reasoning=self._supports_reasoning,
             )
         )
 
@@ -182,43 +193,76 @@ class ChatModelAdapter(Runnable):
         return getattr(self._model, name)
 
 
-def load_chat_model(provider: str = "google") -> ChatModelAdapter:
+def load_chat_model(
+    provider: str = "google",
+    model: str | None = None,
+    temperature: float | None = None,
+) -> ChatModelAdapter:
     """Loads a provider-specific chat model, chosen by environment.
 
     Available providers:
         - **Google**: gemini-3.1-flash-lite-preview
         - **Ollama**: qwen3:8b-q4_k_m
+    Args:
+        provider: The name of the provider to load. Supported values are
+            "google" and "ollama". Defaults to "google".
+        temperature: Sampling temperature for the model. Higher values produce more
+            random outputs, while lower values produce more deterministic outputs.
+            Accepted values are [0.0, 1.0] for Ollama and [0.0, 2.0]
+            for Google Gemini.
 
     Returns:
         A configured ``ChatModelAdapter`` for the detected provider.
     """
+    if provider not in {"google", "ollama"}:
+        raise ValueError(f"Unsupported provider: {provider}")
+    if (
+        provider == "google"
+        and temperature is not None
+        and not (0.0 <= temperature <= 2.0)
+    ):
+        raise ValueError(
+            "Temperature for Google Gemini must be between 0.0 and 2.0"
+        )
+    if (
+        provider in {"ollama"}
+        and temperature is not None
+        and not (0.0 <= temperature <= 1.0)
+    ):
+        raise ValueError(
+            f"Temperature for {provider.title()} must be between 0.0 and 1.0"
+        )
+
     if provider == "google" and os.getenv("GOOGLE_API_KEY"):
+        model_kwargs = {
+            "model": model or "gemini-3.1-flash-lite-preview",
+            "max_retries": 6,
+            # "top_p": 0.85,
+        }
+        if temperature is not None:
+            model_kwargs["temperature"] = temperature
         return ChatModelAdapter(
             ProviderConfig(
                 provider="google",
-                model=ChatGoogleGenerativeAI(
-                    model="gemini-3.1-flash-lite-preview",
-                    max_retries=6,
-                    temperature=0.8,
-                    top_p=0.85,
-                ),
+                model=ChatGoogleGenerativeAI(**model_kwargs),
                 reasoning_kwarg="thinking_level",
-                content_field="text",
+                content_extractor=lambda r: r.text,
                 reasoning_encoder=lambda v: "high" if v else "medium",
             )
         )
     else:
+        model_kwargs = {
+            "model": model or "qwen3:8b-q4_k_m",
+            "keep_alive": False,
+            # "top_p": 0.85,
+        }
+        if temperature is not None:
+            model_kwargs["temperature"] = temperature
         return ChatModelAdapter(
             ProviderConfig(
                 provider="ollama",
-                model=ChatOllama(
-                    model="qwen3:8b-q4_k_m",
-                    keep_alive=False,
-                    temperature=0.8,
-                    top_p=0.85,
-                ),
+                model=ChatOllama(**model_kwargs),
                 reasoning_kwarg="reasoning",
-                content_field="content",
             )
         )
 
