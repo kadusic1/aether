@@ -56,7 +56,10 @@ async def intent_router(state: VideoState) -> dict:
     else:
         full_context = user_text
 
-    model = load_chat_model().with_structured_output(
+    model = load_chat_model(
+        temperature=0.2,
+        provider="google",
+    ).with_structured_output(
         IntentDecision,
     )
     response = await model.ainvoke(

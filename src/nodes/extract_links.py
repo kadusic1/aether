@@ -41,7 +41,10 @@ async def extract_links(state: VideoState) -> dict:
         URLs (merged via operator.add reducer).
     """
     last_message = state["messages"][-1]
-    model = load_chat_model().with_structured_output(
+    model = load_chat_model(
+        temperature=0.0,
+        provider="google",
+    ).with_structured_output(
         ExtractedLinks,
     )
     response = await model.ainvoke(

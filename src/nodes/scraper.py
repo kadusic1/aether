@@ -34,7 +34,10 @@ async def scraper(state: VideoState) -> dict:
     raw_content = await scrape_url(sources)
 
     # Generate structured overview via LLM
-    model = load_chat_model()
+    model = load_chat_model(
+        provider="mistral",
+        temperature=0.65,
+    )
     response = await model.ainvoke(
         [
             SystemMessage(
@@ -44,6 +47,5 @@ async def scraper(state: VideoState) -> dict:
             ),
             HumanMessage(content=raw_content),
         ],
-        reasoning=True,
     )
     return {"sources_overview": response}
