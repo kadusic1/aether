@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from langchain_core.language_models.chat_models import BaseChatModel
 from typing import Any, Callable
 from langchain_core.runnables import Runnable
+from langchain_mistralai import ChatMistralAI
 
 
 @dataclass(frozen=True)
@@ -203,18 +204,19 @@ def load_chat_model(
     Available providers:
         - **Google**: gemini-3.1-flash-lite-preview
         - **Ollama**: qwen3:8b-q4_k_m
+        - **Mistral**: mistral-large-latest (Mistral Large 3)
     Args:
         provider: The name of the provider to load. Supported values are
             "google" and "ollama". Defaults to "google".
         temperature: Sampling temperature for the model. Higher values produce more
             random outputs, while lower values produce more deterministic outputs.
-            Accepted values are [0.0, 1.0] for Ollama and [0.0, 2.0]
+            Accepted values are [0.0, 1.0] for Ollama and Mistral, and [0.0, 2.0]
             for Google Gemini.
 
     Returns:
         A configured ``ChatModelAdapter`` for the detected provider.
     """
-    if provider not in {"google", "ollama"}:
+    if provider not in {"google", "ollama", "mistral"}:
         raise ValueError(f"Unsupported provider: {provider}")
     if (
         provider == "google"
@@ -225,7 +227,7 @@ def load_chat_model(
             "Temperature for Google Gemini must be between 0.0 and 2.0"
         )
     if (
-        provider in {"ollama"}
+        provider in {"ollama", "mistral"}
         and temperature is not None
         and not (0.0 <= temperature <= 1.0)
     ):
@@ -248,6 +250,22 @@ def load_chat_model(
                 reasoning_kwarg="thinking_level",
                 content_extractor=lambda r: r.text,
                 reasoning_encoder=lambda v: "high" if v else "medium",
+            )
+        )
+    elif provider == "mistral" and os.getenv("MISTRAL_API_KEY"):
+        model_kwargs = {
+            "model": model or "mistral-large-latest",
+            "max_retries": 6,
+        }
+        if temperature is not None:
+            model_kwargs["temperature"] = temperature
+        return ChatModelAdapter(
+            ProviderConfig(
+                provider="mistral",
+                model=ChatMistralAI(**model_kwargs),
+                reasoning_kwarg="",  # Mistral doesn't have a specific reasoning kwarg
+                content_extractor=lambda r: r.content,
+                supports_reasoning=False,
             )
         )
     else:
