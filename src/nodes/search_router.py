@@ -39,7 +39,10 @@ async def search_router(state: VideoState) -> dict:
         Dict with 'use_search' boolean flag.
     """
     last_message = state["messages"][-1]
-    model = load_chat_model().with_structured_output(
+    model = load_chat_model(
+        temperature=0.2,
+        provider="google",
+    ).with_structured_output(
         SearchDecision,
     )
     response = await model.ainvoke(

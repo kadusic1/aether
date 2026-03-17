@@ -85,7 +85,10 @@ async def search_node(state: VideoState) -> dict:
         persona=niche.persona,
         examples="\n".join(niche.trending_search_queries),
     )
-    query_model = load_chat_model().with_structured_output(
+    query_model = load_chat_model(
+        temperature=0.99,
+        provider="mistral",
+    ).with_structured_output(
         SearchQuery,
     )
     query_result = await query_model.ainvoke(
