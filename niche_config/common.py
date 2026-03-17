@@ -135,8 +135,13 @@ scraper_prompt = (
     "- NEVER invent, infer, or generate information that is not directly found in the input.\n"
     "- For each bullet point, include the source (URL or page title) it came from."
     "- You MUST strictly use the facts found in the articles. Do not invent psychological\n"
-    "terms. Use this exact format for your output: 1. Viral Angle 2. Core Principle\n"
-    "3. Key Finding 4. Counterintuitive Insight 5. Exact Source."
+    "terms. Use this exact format for your output:\n"
+    "# **CONCEPT**:\n"
+    "1. **Viral Angle**:\n"
+    "2. **Core Principle**:\n"
+    "3. **Key Finding**:\n"
+    "4. **Counterintuitive Insight**:\n"
+    "5. **Exact Source**: including the URL and page title: [URL] (Page Title)"
 )
 
 
