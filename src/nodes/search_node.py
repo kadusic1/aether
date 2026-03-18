@@ -1,5 +1,3 @@
-from typing import Literal
-
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
@@ -22,20 +20,6 @@ class SearchQuery(BaseModel):
     query: str = Field(
         description="The search query to execute.",
     )
-    num_results: int = Field(
-        default=10,
-        ge=5,
-        le=15,
-        description=("Number of search results to request (5-15)."),
-    )
-    time_range: Literal["day", "week", "month", "year"] | None = Field(
-        default="month",
-        description=(
-            "Time range filter: 'day', 'week',"
-            " 'month', 'year', or null for"
-            " evergreen content."
-        ),
-    )
 
 
 class SelectedResults(BaseModel):
@@ -43,16 +27,16 @@ class SelectedResults(BaseModel):
     Structured output for search result selection.
 
     Attributes:
-        urls: The 1-3 most interesting URLs picked
-            from search results.
+        urls: The most interesting URLs picked from search results.
     """
 
     urls: list[str] = Field(
         min_length=1,
-        max_length=3,
         description=(
-            "The 1 to 3 most interesting URLs"
-            " worth scraping for deeper insights."
+            "The most interesting URLs worth"
+            " scraping for deeper insights."
+            " Pick as many or as few as are"
+            " genuinely relevant."
         ),
     )
 
@@ -64,7 +48,7 @@ async def search_node(state: VideoState) -> dict:
     Performs two sequential LLM calls internally:
     1. Generate a niche-specific search query using
        the search_query_prompt.
-    2. Evaluate raw search results and pick 1-3
+    2. Evaluate raw search results and pick the most
        interesting URLs using the search_picker_prompt.
 
     The search_web tool is called directly between
@@ -101,9 +85,9 @@ async def search_node(state: VideoState) -> dict:
 
     # --- Execute search tool directly ---
     raw_results = await search_web(
-        query_result.query,
-        query_result.num_results,
-        query_result.time_range,
+        query=query_result.query,
+        num_results=10,
+        time_range=None,
     )
 
     # --- Call 2: Pick interesting URLs ---
