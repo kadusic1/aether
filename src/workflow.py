@@ -1,52 +1,45 @@
 from langgraph.graph import END, StateGraph
 
-from src.nodes.extract_links import extract_links
-from src.nodes.intent_router import intent_router
+from src.nodes.message_analyzer import message_analyzer
 from src.nodes.scraper import scraper
 from src.nodes.search_node import search_node
-from src.nodes.search_router import search_router
 from src.state import VideoState
 
 
-def route_search(state: VideoState) -> str:
+def route_after_analysis(state: VideoState) -> str:
     """
-    Conditional edge after search_router.
+    Conditional edge after message_analyzer.
 
-    Routes to search_node if the LLM decided search
-    is needed, otherwise skips directly to scraper.
+    Routes based on search need and available sources:
+    - search_node: when the LLM decided a web search
+      is needed.
+    - scraper: when no search is needed but URLs were
+      extracted from the user's message.
+    - END: when neither search nor scraping is needed.
 
     Args:
         state: The current workflow state.
 
     Returns:
-        The name of the next node.
+        The name of the next node, or END.
     """
     if state["use_search"]:
         return "search_node"
-    return "scraper"
-
-
-def route_intent(state: VideoState) -> str:
-    """
-    Conditional edge after intent_router.
-
-    Fans out to the appropriate downstream handler
-    based on classified intent. Currently all routes
-    terminate at END (placeholders for future
-    sub-graphs).
-
-    Args:
-        state: The current workflow state.
-
-    Returns:
-        The classified intent string.
-    """
-    return state["intent"]
+    if state.get("sources"):
+        return "scraper"
+    return END
 
 
 def build_workflow():
     """
     Construct and compile the LangGraph workflow.
+
+    The graph has three nodes:
+    1. message_analyzer — extracts URLs, decides
+       search, and classifies intent in one LLM call.
+    2. search_node — generates a query, searches the
+       web, and picks the best URLs.
+    3. scraper — scrapes URLs and summarizes content.
 
     Returns:
         The compiled StateGraph ready for execution.
@@ -54,41 +47,27 @@ def build_workflow():
     graph_builder = StateGraph(VideoState)
 
     # Nodes
-    graph_builder.add_node("extract_links", extract_links)
-    graph_builder.add_node("search_router", search_router)
+    graph_builder.add_node("message_analyzer", message_analyzer)
     graph_builder.add_node("search_node", search_node)
     graph_builder.add_node("scraper", scraper)
-    graph_builder.add_node("intent_router", intent_router)
 
     # Edges
-    graph_builder.set_entry_point("extract_links")
-    graph_builder.add_edge("extract_links", "search_router")
+    graph_builder.set_entry_point("message_analyzer")
 
-    # Search router conditional: search or skip
     graph_builder.add_conditional_edges(
-        "search_router",
-        route_search,
+        "message_analyzer",
+        route_after_analysis,
         {
             "search_node": "search_node",
             "scraper": "scraper",
+            END: END,
         },
     )
 
-    # Search node always flows to scraper
+    # Search results always flow to scraper
     graph_builder.add_edge("search_node", "scraper")
 
-    # Scraper always flows to intent router
-    graph_builder.add_edge("scraper", "intent_router")
-
-    # Intent router fans out (all END for now)
-    graph_builder.add_conditional_edges(
-        "intent_router",
-        route_intent,
-        {
-            "video_planning": END,
-            "video_generation": END,
-            "basic_chat": END,
-        },
-    )
+    # Scraper terminates the workflow
+    graph_builder.add_edge("scraper", END)
 
     return graph_builder.compile()

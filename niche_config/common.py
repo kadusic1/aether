@@ -41,26 +41,21 @@ and formatted outputs.
 - **Share Ratio**: High viral coefficient through relatable, saveable content"""
 
 
-extract_links_prompt = (
+message_analyzer_prompt = (
     "PERSONA: {persona}\n\n"
     "ROLE:\n"
-    "You are acting as a URL extraction assistant.\n"
-    "Your ONLY job is to extract every URL and domain name from the user's message.\n\n"
-    "RULES:\n"
+    "Analyze the user's message for the content creation workflow."
+    " You must perform ALL THREE tasks below in a single response.\n\n"
+    "## URL EXTRACTION\n"
+    "Extract every URL and domain name from the user's message.\n\n"
     "- Extract full URLs (https://example.com/page) and bare domains (vt.tiktok.com/abc123,"
     " reddit.com/r/topic).\n"
     "- Include shortened URLs (bit.ly/xyz, t.co/abc).\n"
     "- Do NOT invent or guess URLs that are not explicitly present in the text.\n"
     "- If no URLs or domains exist in the text, return an empty list.\n"
-    "- Do NOT include email addresses."
-)
-
-
-search_router_prompt = (
-    "PERSONA: {persona}\n\n"
-    "ROLE:\n"
-    "You are acting as a search decision assistant for a content creation workflow.\n\n"
-    "Your ONLY job is to decide whether the user's message requires a web search.\n\n"
+    "- Do NOT include email addresses.\n\n"
+    "## SEARCH DECISION\n"
+    "Decide whether the user's message requires a web search.\n\n"
     "USE SEARCH when:\n"
     "- The user wants brainstorming or content ideas (e.g. 'Give me cool content ideas!')\n"
     "- The user asks for a video topic (e.g. 'Make me a YT/TikTok/IG short!')\n"
@@ -72,7 +67,19 @@ search_router_prompt = (
     "- Simple acknowledgment (e.g. 'I like the idea you gave me!')\n"
     "- The user is selecting from options you already presented\n"
     "- The user is giving feedback on previous output\n"
-    "- Casual greetings or meta-conversation"
+    "- Casual greetings or meta-conversation\n\n"
+    "## INTENT CLASSIFICATION\n"
+    "Classify the user's intent into exactly ONE of these categories:\n\n"
+    "- video_planning: The user wants to brainstorm, research, or finalize a video topic."
+    " Examples: 'Give me video ideas', 'Find trending topics', 'I want to make a video about"
+    " this', 'Search for techniques'.\n\n"
+    "- video_generation: The user has already chosen a topic and wants to proceed with creating"
+    " the video (script, visuals, audio). Examples: 'Generate the video', 'Let's make it',"
+    " 'I pick option 2, start generating', 'Create the video about the effect'.\n\n"
+    "- basic_chat: The user's message is NOT related to content creation. General questions,"
+    " casual conversation, or requests that don't involve planning or generating videos."
+    " Examples: 'What is this?', 'Tell me about yourself', 'Thanks!', 'What does this article"
+    " say?'."
 )
 
 
@@ -138,22 +145,4 @@ scraper_prompt = (
     "3. **Key Finding**:\n"
     "4. **Counterintuitive Insight**:\n"
     "5. **Exact Source**: including the URL and page title: [URL] (Page Title)"
-)
-
-
-intent_router_prompt = (
-    "PERSONA: {persona}\n\n"
-    "ROLE:\n"
-    "You are acting as an intent classifier for a content creation workflow.\n\n"
-    "Classify the user's intent into exactly ONE of these categories:\n\n"
-    "- video_planning: The user wants to brainstorm, research, or finalize a video topic."
-    " Examples: 'Give me video ideas', 'Find trending topics', 'I want to make a video about"
-    " this', 'Search for techniques'.\n\n"
-    "- video_generation: The user has already chosen a topic and wants to proceed with creating"
-    " the video (script, visuals, audio). Examples: 'Generate the video', 'Let's make it',"
-    " 'I pick option 2, start generating', 'Create the video about the effect'.\n\n"
-    "- basic_chat: The user's message is NOT related to content creation. General questions,"
-    " casual conversation, or requests that don't involve planning or generating videos."
-    " Examples: 'What is this?', 'Tell me about yourself', 'Thanks!', 'What does this article"
-    " say?'."
 )

@@ -14,8 +14,7 @@ async def main() -> None:
 
     Runs an interactive chat loop that processes user
     input through the full workflow pipeline:
-    extract_links -> search_router -> search_node ->
-    scraper -> intent_router.
+    message_analyzer -> search_node -> scraper.
     """
     print("Initializing Aether Workflow...")
     graph = build_workflow()
@@ -42,7 +41,7 @@ async def main() -> None:
             continue
 
         start = time.perf_counter()
-        print("\nProcessing: extracting links, routing, searching, scraping...")
+        print("\nProcessing: analyzing, searching, scraping...")
         state["messages"].append(
             HumanMessage(content=user_input),
         )
