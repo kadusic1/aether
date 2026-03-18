@@ -31,7 +31,7 @@ class SelectedResults(BaseModel):
     """
 
     urls: list[str] = Field(
-        min_length=1,
+        min_length=3,
         description=(
             "The most interesting URLs worth"
             " scraping for deeper insights."
@@ -91,7 +91,10 @@ async def search_node(state: VideoState) -> dict:
     )
 
     # --- Call 2: Pick interesting URLs ---
-    picker_model = load_chat_model().with_structured_output(
+    picker_model = load_chat_model(
+        provider="google",
+        temperature=0.7,
+    ).with_structured_output(
         SelectedResults,
     )
     picker_result = await picker_model.ainvoke(
