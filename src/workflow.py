@@ -25,7 +25,7 @@ def route_after_analysis(state: VideoState) -> str:
     """
     if state["use_search"]:
         return "search_node"
-    if state.get("sources"):
+    if state.get("web_sources") or state.get("youtube_sources"):
         return "scraper"
     return END
 

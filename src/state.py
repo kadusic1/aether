@@ -17,10 +17,13 @@ class VideoState(TypedDict):
             video.
         messages: Conversation history, automatically
             appended by LangGraph.
-        sources: Accumulated URLs from user input and
-            search results. Uses operator.add reducer
-            so multiple nodes can append without
+        web_sources: Accumulated web URLs from user
+            input and search results. Uses operator.add
+            reducer so multiple nodes can append without
             overwriting.
+        youtube_sources: Accumulated YouTube video IDs
+            from user input and search results. Uses
+            operator.add reducer.
         sources_overview: LLM-generated summary of
             scraped source content.
         intent: Classified intent of the user's prompt
@@ -32,7 +35,8 @@ class VideoState(TypedDict):
 
     niche: Niche
     messages: Annotated[list[AnyMessage], add_messages]
-    sources: Annotated[list[str], operator.add]
+    web_sources: Annotated[list[str], operator.add]
+    youtube_sources: Annotated[list[str], operator.add]
     sources_overview: str
     intent: str
     use_search: bool

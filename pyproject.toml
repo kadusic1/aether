@@ -19,6 +19,8 @@ dependencies = [
     "langgraph>=1.0.10",
     "qwen-tts>=0.1.1",
     "torch>=2.10.0",
+    "youtube-transcript-api>=1.2.4",
+    "yt-dlp>=2026.3.13",
 ]
 
 [dependency-groups]
