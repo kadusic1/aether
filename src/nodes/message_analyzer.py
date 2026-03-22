@@ -14,20 +14,29 @@ class MessageAnalysis(BaseModel):
     intent classification from the user's message.
 
     Attributes:
-        urls: List of URLs and bare domains found
+        web_urls: List of web URLs and bare domains found
             in the user's message. Empty if none
             found.
+        yt_ids: List of YouTube video IDs extracted from
+            the message. Empty if none found.
         use_search: Whether the user's message
             requires a web search.
         intent: The classified intent of the user's
             prompt.
     """
 
-    urls: list[str] = Field(
+    web_urls: list[str] = Field(
         default_factory=list,
         description=(
             "URLs and bare domains extracted from"
             " the text. Empty list if none found."
+            " DOES NOT include YouTube URLs, those are handled separately."
+        ),
+    )
+    yt_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "YouTube video IDs extracted from the text. Empty list if none found."
         ),
     )
     use_search: bool = Field(
@@ -53,16 +62,13 @@ async def message_analyzer(state: VideoState) -> dict:
 
     Performs URL extraction, search routing, and intent
     classification together using structured output.
-    Replaces the previously separate extract_links,
-    search_router, and intent_router nodes.
 
     Args:
         state: The current workflow state.
 
     Returns:
-        Dict with 'sources' (extracted URLs),
-        'use_search' (boolean flag), and 'intent'
-        (classified intent string).
+        Dict with 'web_sources', 'youtube_sources',
+        'use_search', and 'intent'.
     """
     last_message = state["messages"][-1]
     model = load_chat_model(
@@ -83,7 +89,8 @@ async def message_analyzer(state: VideoState) -> dict:
         reasoning=False,
     )
     return {
-        "sources": response.urls,
+        "web_sources": response.web_urls,
+        "youtube_sources": response.yt_ids,
         "use_search": response.use_search,
         "intent": response.intent,
     }

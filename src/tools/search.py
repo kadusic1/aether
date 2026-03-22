@@ -1,7 +1,12 @@
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 from src.services import get_searx
-from typing import Literal
+from typing import Any, Literal
+import httpx
+import yt_dlp
+from urllib.parse import urlencode
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
 
 
 async def search_web(
@@ -35,7 +40,6 @@ async def scrape_url(urls: list[str]) -> str:
     Scraping is done concurrently.
     Optimized for LLM consumption by removing navigation, footers, forms,
     overlays, and ignoring links/images.
-    Maximum number of URLs is 3.
 
     Args:
         urls: A list of web addresses to scrape (e.g., for one url ["https://site1.com"]
@@ -44,7 +48,6 @@ async def scrape_url(urls: list[str]) -> str:
     Returns:
         A combined string of clean, formatted markdown from all successful webpages.
     """
-    urls = urls[:3]
     browser_config = BrowserConfig(
         headless=True,
         enable_stealth=True,
@@ -84,3 +87,91 @@ async def scrape_url(urls: list[str]) -> str:
 
     # Join everything together for the LLM context window
     return "".join(combined_results)
+
+
+def search_youtube(query: str, num_results: int = 25) -> list[dict[str, Any]]:
+    """Search YouTube for videos matching the given query.
+
+    Performs a popularity-sorted YouTube search using yt-dlp with English
+    language bias. The function uses custom URL parameters:
+    - `sp=CAMSAigB` to sort results by popularity and with subtitles included.
+    - `hl=en` to set the interface language to English.
+    - `gl=US` to set the country to United States.
+
+    Args:
+        query: The search query string.
+        num_results: Maximum number of results to return. Defaults to 5.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the search results.
+    """
+    # Preprocess the query ensuring to avoid Hindi results
+    query = f"{query} -hindi"
+    print(query, flush=True)
+
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "extract_flat": True,
+        "playlist_items": f"1-{num_results}",
+        # extractor_args can be used to set language preferences for certain extractors
+        "extractor_args": {"youtube": {"lang": ["en"]}},
+    }
+    params = urlencode(
+        {
+            "search_query": query,
+            # Sort by popularity and include subtitles
+            "sp": "CAMSAigB",
+            "hl": "en",
+            "gl": "US",
+        }
+    )
+    search_url = f"https://www.youtube.com/results?{params}"
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        results = ydl.extract_info(search_url, download=False)
+
+    return [
+        {
+            "channel": entry.get("channel"),
+            "description": entry.get("description"),
+            "title": entry.get("title"),
+            "duration": entry.get("duration"),
+            "url": entry.get("url"),
+            "view_count": entry.get("view_count"),
+            "id": entry.get("id"),
+        }
+        for entry in results.get("entries", [])
+        if entry is not None
+    ]
+
+
+def transcript_youtube_videos(video_ids: list[str]) -> str:
+    """
+    Fetch and format transcripts for YouTube videos.
+
+    Args:
+        video_ids: A list of YouTube video IDs to
+            fetch transcripts for.
+
+    Returns:
+        A combined string of formatted transcripts,
+        each prefixed with a source header. Failed
+        fetches include an error message.
+    """
+    ytt_api = YouTubeTranscriptApi()
+    formatter = TextFormatter()
+    combined = []
+    for video_id in video_ids:
+        url = f"https://youtube.com/watch?v={video_id}"
+        try:
+            transcript = ytt_api.fetch(video_id)
+            text = formatter.format_transcript(
+                transcript=transcript,
+            )
+            combined.append(f"### Source: {url}\n{text[:5000]}\n\n")
+        except Exception as e:
+            combined.append(
+                f"### Source: {url}\nFailed to fetch transcript: {e}\n\n"
+            )
+    return "".join(combined)

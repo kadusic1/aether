@@ -23,7 +23,8 @@ async def main() -> None:
     state: VideoState = {
         "niche": niche_factory("psychology"),
         "messages": [],
-        "sources": [],
+        "web_sources": [],
+        "youtube_sources": [],
         "sources_overview": "",
         "intent": "",
         "use_search": False,
@@ -48,7 +49,8 @@ async def main() -> None:
 
         # Reset per-turn transient fields so they
         # don't carry over from previous turns.
-        state["sources"] = []
+        state["web_sources"] = []
+        state["youtube_sources"] = []
         state["sources_overview"] = ""
         state["intent"] = ""
         state["use_search"] = False
@@ -58,7 +60,8 @@ async def main() -> None:
 
         # Debug output for the pipeline results
         print(f"\n  Intent:  {state['intent']}")
-        print(f"  Sources: {state['sources']}")
+        print(f"  Web Sources: {state['web_sources']}")
+        print(f"  YouTube Sources: {state['youtube_sources']}")
         overview = state["sources_overview"]
         if overview:
             print(f"  Overview: {overview}...")

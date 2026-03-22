@@ -4,7 +4,8 @@ from pydantic import BaseModel, Field
 from niche_config.common import search_picker_prompt, search_query_prompt
 from src.models import load_chat_model
 from src.state import VideoState
-from src.tools import search_web
+from src.tools import search_web, search_youtube
+import asyncio
 
 
 class SearchQuery(BaseModel):
@@ -12,13 +13,20 @@ class SearchQuery(BaseModel):
     Structured output for search query generation.
 
     Attributes:
-        query: The search query to execute.
-        num_results: Number of results to request.
-        time_range: Time range filter for recency.
+        query: The web search query to execute.
+        youtube_query: A YouTube-specific search query
+            targeting video content.
     """
 
     query: str = Field(
-        description="The search query to execute.",
+        description="The web search query to execute.",
+    )
+    youtube_query: str = Field(
+        description=(
+            "A SHORT, keyword-based YouTube search query (2-4 words maximum)."
+            " Search should find videos that the audience relates to, finds"
+            " entertaining, or can learn from."
+        ),
     )
 
 
@@ -27,44 +35,56 @@ class SelectedResults(BaseModel):
     Structured output for search result selection.
 
     Attributes:
-        urls: The most interesting URLs picked from search results.
+        web_urls: The most interesting web URLs picked
+            from search results.
+        youtube_ids: YouTube video IDs selected for
+            transcript extraction.
     """
 
-    urls: list[str] = Field(
+    web_urls: list[str] = Field(
         min_length=3,
         description=(
-            "The most interesting URLs worth"
+            "The most interesting web URLs worth"
             " scraping for deeper insights."
             " Pick as many or as few as are"
             " genuinely relevant."
+        ),
+    )
+    youtube_ids: list[str] = Field(
+        min_length=3,
+        description=(
+            "YouTube video IDs selected for transcript"
+            " extraction. Pick videos most likely to"
+            " contain unique insights for viral"
+            " short-form content."
         ),
     )
 
 
 async def search_node(state: VideoState) -> dict:
     """
-    Execute a web search and pick interesting results.
+    Execute search and pick interesting results.
 
-    Performs two sequential LLM calls internally:
-    1. Generate a niche-specific search query using
-       the search_query_prompt.
-    2. Evaluate raw search results and pick the most
-       interesting URLs using the search_picker_prompt.
-
-    The search_web tool is called directly between
-    the two LLM calls (not as an LLM tool call).
+    Performs two LLM calls with concurrent tool
+    execution in between:
+    1. Generate a web query and a YouTube query in
+       one LLM call.
+    2. Execute both searches concurrently (YouTube
+       runs in a thread since yt-dlp is synchronous).
+    3. Evaluate combined results and pick the best
+       web URLs and YouTube video IDs.
 
     Args:
         state: The current workflow state.
 
     Returns:
-        Dict with 'sources' key containing selected
-        URLs (merged via operator.add reducer).
+        Dict with 'web_sources' and 'youtube_sources'
+        (merged via operator.add reducers).
     """
     niche = state["niche"]
     last_message = state["messages"][-1]
 
-    # --- Call 1: Generate search query ---
+    # --- Call 1: Generate both search queries ---
     query_prompt = search_query_prompt.format(
         persona=niche.persona,
         examples="\n".join(niche.trending_search_queries),
@@ -83,14 +103,36 @@ async def search_node(state: VideoState) -> dict:
         reasoning=False,
     )
 
-    # --- Execute search tool directly ---
-    raw_results = await search_web(
-        query=query_result.query,
-        num_results=10,
-        time_range=None,
+    # --- Execute both searches concurrently ---
+    raw_results, yt_results = await asyncio.gather(
+        search_web(
+            query=query_result.query,
+            num_results=10,
+            time_range=None,
+        ),
+        asyncio.to_thread(
+            search_youtube,
+            query=query_result.youtube_query,
+            num_results=15,
+        ),
     )
 
-    # --- Call 2: Pick interesting URLs ---
+    # Format YouTube results for the picker LLM
+    yt_text = "\n".join(
+        f"- {v['title']} | {v['channel']}"
+        f" | {v['view_count']} views"
+        f" | {v['duration']}s | ID: {v['id']}"
+        for v in yt_results
+    )
+
+    combined_input = (
+        "## Web Search Results\n"
+        f"{raw_results}\n\n"
+        "## YouTube Search Results\n"
+        f"{yt_text}\n"
+    )
+
+    # --- Call 2: Pick interesting results ---
     picker_model = load_chat_model(
         provider="google",
         temperature=0.7,
@@ -104,9 +146,12 @@ async def search_node(state: VideoState) -> dict:
                     persona=niche.persona,
                 ),
             ),
-            HumanMessage(content=raw_results),
+            HumanMessage(content=combined_input),
         ],
         reasoning=False,
     )
 
-    return {"sources": picker_result.urls}
+    return {
+        "web_sources": picker_result.web_urls,
+        "youtube_sources": picker_result.youtube_ids,
+    }

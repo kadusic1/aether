@@ -3,7 +3,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from niche_config.common import scraper_prompt
 from src.models import load_chat_model
 from src.state import VideoState
-from src.tools import scrape_url
+from src.tools import scrape_url, transcript_youtube_videos
+import asyncio
 
 
 async def scraper(state: VideoState) -> dict:
@@ -16,6 +17,11 @@ async def scraper(state: VideoState) -> dict:
     gates this node via a conditional edge, but the
     node handles it gracefully regardless).
 
+    Web scraping and transcript fetching run
+    concurrently via asyncio.gather. The synchronous
+    transcript_youtube_videos call is offloaded to a
+    thread.
+
     Stores the result in sources_overview only, not
     in messages.
 
@@ -26,12 +32,21 @@ async def scraper(state: VideoState) -> dict:
         Dict with 'sources_overview' containing the
         LLM-generated summary of scraped content.
     """
-    sources = state.get("sources", [])
-    if not sources:
+    web_sources = state.get("web_sources", [])
+    yt_sources = state.get("youtube_sources", [])
+
+    if not web_sources and not yt_sources:
         return {"sources_overview": ""}
 
-    # Scrape all URLs using the existing tool
-    raw_content = await scrape_url(sources)
+    # Scrape web and fetch transcripts concurrently
+    web_content, yt_content = await asyncio.gather(
+        scrape_url(web_sources) if web_sources else _empty(),
+        asyncio.to_thread(transcript_youtube_videos, yt_sources)
+        if yt_sources
+        else _empty(),
+    )
+
+    raw_content = web_content + yt_content
 
     # Generate structured overview via LLM
     model = load_chat_model(
@@ -49,3 +64,13 @@ async def scraper(state: VideoState) -> dict:
         ],
     )
     return {"sources_overview": response}
+
+
+async def _empty() -> str:
+    """
+    No-op coroutine returning an empty string.
+
+    Used as a placeholder in asyncio.gather when one
+    of the source lists is empty.
+    """
+    return ""
