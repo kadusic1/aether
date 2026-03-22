@@ -5,6 +5,7 @@ from src.models import load_chat_model
 from src.state import VideoState
 from src.tools import scrape_url, transcript_youtube_videos
 import asyncio
+from src.utils import empty
 
 
 async def scraper(state: VideoState) -> dict:
@@ -40,10 +41,10 @@ async def scraper(state: VideoState) -> dict:
 
     # Scrape web and fetch transcripts concurrently
     web_content, yt_content = await asyncio.gather(
-        scrape_url(web_sources) if web_sources else _empty(),
+        scrape_url(web_sources) if web_sources else empty(),
         asyncio.to_thread(transcript_youtube_videos, yt_sources)
         if yt_sources
-        else _empty(),
+        else empty(),
     )
 
     raw_content = web_content + yt_content
@@ -64,13 +65,3 @@ async def scraper(state: VideoState) -> dict:
         ],
     )
     return {"sources_overview": response}
-
-
-async def _empty() -> str:
-    """
-    No-op coroutine returning an empty string.
-
-    Used as a placeholder in asyncio.gather when one
-    of the source lists is empty.
-    """
-    return ""

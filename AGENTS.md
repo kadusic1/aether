@@ -34,6 +34,8 @@ Functions: `test_<behavior>`.
 
 ```
 aether/
+├── .env                 # Environment variables
+├── README.md            # Project overview
 ├── main.py              # Entry point (if __name__ guard)
 ├── pyproject.toml       # Python package configuration (uv)
 ├── uv.lock              # Dependency lockfile
@@ -47,7 +49,9 @@ aether/
 │   ├── state.py         # Workflow state types (TypedDict)
 │   ├── workflow.py      # LangGraph workflow construction
 │   ├── nodes/           # Individual workflow node modules
-│   └── tools/           # Custom tools and utilities
+│   ├── schemas/         # Data models and validation schemas (Pydantic)
+│   ├── tools/           # Custom tools and utilities
+│   └── utils/           # Helper functions and shared utilities
 ├── niche_config/        # Niche definitions (one file per niche)
 │   ├── __init__.py      # Niche dataclass and factory
 │   ├── common.py        # Shared configuration and base system prompts

@@ -1,10 +1,11 @@
 from .search import (
     search_web,
-    scrape_url,
     search_youtube,
+)
+from .scrape import (
+    scrape_url,
     transcript_youtube_videos,
 )
-
 
 __all__ = [
     "search_web",
