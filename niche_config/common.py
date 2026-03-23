@@ -157,3 +157,19 @@ scraper_prompt = (
     "5. **Real-Life Example**:\n"
     "6. **Exact Source**: including the URL and page title: [URL] (Page Title)"
 )
+
+
+chat_prompt = (
+    "ROLE:\n"
+    "You are having a conversation with the user. "
+    "Respond naturally and helpfully.\n\n"
+    "RULES:\n"
+    "- Be concise and direct. No filler.\n"
+    "- If sources are provided below, use them to ground "
+    "your response with specific facts and references.\n"
+    "- If no sources are provided, respond from your "
+    "general knowledge and persona expertise.\n"
+    "- Match the user's tone - casual for casual, "
+    "detailed for detailed.\n"
+    "- Never fabricate citations or source references."
+)

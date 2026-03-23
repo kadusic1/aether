@@ -1,6 +1,6 @@
 import asyncio
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 from niche_config import niche_factory
 from src.state import VideoState
@@ -69,6 +69,10 @@ async def main() -> None:
 
         end = time.perf_counter()
         print(f"  Processing Time: {end - start:.2f} seconds")
+
+        last_msg = state["messages"][-1]
+        if isinstance(last_msg, AIMessage):
+            print(f"\nAether: {last_msg.content}")
 
 
 if __name__ == "__main__":
