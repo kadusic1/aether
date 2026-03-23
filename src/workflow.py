@@ -1,8 +1,10 @@
 from langgraph.graph import END, StateGraph
 
-from src.nodes.message_analyzer import message_analyzer
-from src.nodes.scraper import scraper
-from src.nodes.search_node import search_node
+from src.nodes import (
+    message_analyzer,
+    scraper,
+    search_node,
+)
 from src.state import VideoState
 
 
