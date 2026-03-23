@@ -37,7 +37,7 @@ async def search_node(state: VideoState) -> dict:
         examples="\n".join(niche.trending_search_queries),
     )
     query_model = load_chat_model(
-        temperature=0.99,
+        temperature=1,
         provider="mistral",
     ).with_structured_output(
         SearchQuery,
