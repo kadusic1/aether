@@ -96,7 +96,7 @@ search_query_prompt = (
     " 'topic specific detail'.\n"
     "- Be specific and niche. Avoid broad, generic terms.\n"
     "- Aim for queries that surface unique, counterintuitive, or little-known concepts.\n"
-    "- The YouTube query MUST be short and keyword-heavy (2-4 words max) to ensure API results.\n"
+    "- The YouTube query MUST be short and keyword-heavy (3-4 words max) to ensure API results.\n"
     "Use these example queries for inspiration:\n"
     "{examples}"
 )
@@ -135,6 +135,7 @@ scraper_prompt = (
     "- Potential viral angle for short-form video\n"
     "- Core principle or effect name\n"
     "- Key finding or counterintuitive insight\n"
+    "- Real-life example or story\n"
     "- Supporting evidence or study reference\n"
     "- Source (URL or page title)\n\n"
     "RULES:\n"
@@ -153,5 +154,6 @@ scraper_prompt = (
     "2. **Core Principle**:\n"
     "3. **Key Finding**:\n"
     "4. **Counterintuitive Insight**:\n"
-    "5. **Exact Source**: including the URL and page title: [URL] (Page Title)"
+    "5. **Real-Life Example**:\n"
+    "6. **Exact Source**: including the URL and page title: [URL] (Page Title)"
 )
