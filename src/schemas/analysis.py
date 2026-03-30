@@ -1,11 +1,10 @@
 from pydantic import BaseModel, Field
-from typing import Literal
 
 
 class MessageAnalysis(BaseModel):
     """
-    Combined URL extraction, search routing, and
-    intent classification from the user's message.
+    Combined URL extraction and search routing
+    from the user's message.
 
     Attributes:
         web_urls: List of web URLs and bare domains found
@@ -15,8 +14,6 @@ class MessageAnalysis(BaseModel):
             the message. Empty if none found.
         use_search: Whether the user's message
             requires a web search.
-        intent: The classified intent of the user's
-            prompt.
     """
 
     web_urls: list[str] = Field(
@@ -36,15 +33,5 @@ class MessageAnalysis(BaseModel):
     use_search: bool = Field(
         description=(
             "True if the user's message requires a web search, False otherwise."
-        ),
-    )
-    intent: Literal[
-        "video_planning",
-        "video_generation",
-        "basic_chat",
-    ] = Field(
-        description=(
-            "The classified intent: video_planning,"
-            " video_generation, or basic_chat."
         ),
     )

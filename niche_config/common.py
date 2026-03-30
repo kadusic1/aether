@@ -69,19 +69,7 @@ message_analyzer_prompt = (
     "- Simple acknowledgment (e.g. 'I like the idea you gave me!')\n"
     "- The user is selecting from options you already presented\n"
     "- The user is giving feedback on previous output\n"
-    "- Casual greetings or meta-conversation\n\n"
-    "## INTENT CLASSIFICATION\n"
-    "Classify the user's intent into exactly ONE of these categories:\n\n"
-    "- video_planning: The user wants to brainstorm, research, or finalize a video topic."
-    " Examples: 'Give me video ideas', 'Find trending topics', 'I want to make a video about"
-    " this', 'Search for techniques'.\n\n"
-    "- video_generation: The user has already chosen a topic and wants to proceed with creating"
-    " the video (script, visuals, audio). Examples: 'Generate the video', 'Let's make it',"
-    " 'I pick option 2, start generating', 'Create the video about the effect'.\n\n"
-    "- basic_chat: The user's message is NOT related to content creation. General questions,"
-    " casual conversation, or requests that don't involve planning or generating videos."
-    " Examples: 'What is this?', 'Tell me about yourself', 'Thanks!', 'What does this article"
-    " say?'."
+    "- Casual greetings or meta-conversation"
 )
 
 

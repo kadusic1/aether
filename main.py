@@ -57,7 +57,10 @@ async def main() -> None:
         state["use_search"] = False
 
         # Invoke the graph
-        state = await graph.ainvoke(state)  # type: ignore
+        try:
+            state = await graph.ainvoke(state)  # type: ignore
+        except Exception as e:
+            print(f"Error occurred while invoking the graph: {e}")
 
         # Debug output for the pipeline results
         print(f"\n  Intent:  {state['intent']}")

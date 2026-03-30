@@ -31,8 +31,7 @@ class VideoState(TypedDict):
             video. Set by the content_planner node.
             None until planning is complete.
         intent: Classified intent of the user's prompt
-            (video_planning, video_generation,
-            basic_chat).
+            (plan, generate or chat).
         use_search: Transient routing flag set by the
             search router node.
     """
