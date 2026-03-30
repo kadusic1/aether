@@ -13,8 +13,7 @@ async def main() -> None:
     Entry point for the Aether workflow.
 
     Runs an interactive chat loop that processes user
-    input through the full workflow pipeline:
-    message_analyzer -> search_node -> scraper.
+    input through the full workflow pipeline.
     """
     print("Initializing Aether Workflow...")
     graph = build_workflow()
@@ -26,6 +25,7 @@ async def main() -> None:
         "web_sources": [],
         "youtube_sources": [],
         "sources_overview": "",
+        "content_plan": None,
         "intent": "",
         "use_search": False,
     }
@@ -42,7 +42,7 @@ async def main() -> None:
             continue
 
         start = time.perf_counter()
-        print("\nProcessing: analyzing, searching, scraping...")
+        print("\nAether running...")
         state["messages"].append(
             HumanMessage(content=user_input),
         )
@@ -52,6 +52,7 @@ async def main() -> None:
         state["web_sources"] = []
         state["youtube_sources"] = []
         state["sources_overview"] = ""
+        state["content_plan"] = None
         state["intent"] = ""
         state["use_search"] = False
 
@@ -66,9 +67,13 @@ async def main() -> None:
         if overview:
             print(f"  Overview: {overview}...")
         print()
-
         end = time.perf_counter()
         print(f"  Processing Time: {end - start:.2f} seconds")
+
+        content_plan = state["content_plan"]
+        if content_plan:
+            print("\n--- Generated Content Plan ---")
+            print(content_plan)
 
         last_msg = state["messages"][-1]
         if isinstance(last_msg, AIMessage):

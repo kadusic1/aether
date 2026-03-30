@@ -1,6 +1,7 @@
 from langgraph.graph import END, StateGraph
 
 from src.nodes import (
+    content_planner,
     message_analyzer,
     scraper,
     search_node,
@@ -18,6 +19,7 @@ def route_after_analysis(state: VideoState) -> str:
       is needed.
     - scraper: when no search is needed but URLs were
       extracted from the user's message.
+    - chat: when the intent is basic_chat.
     - END: when neither search nor scraping is needed.
 
     Args:
@@ -39,13 +41,15 @@ def build_workflow():
     """
     Construct and compile the LangGraph workflow.
 
-    The graph has four nodes:
+    The graph has five nodes:
     1. message_analyzer — extracts URLs, decides
        search, and classifies intent in one LLM call.
     2. search_node — generates a query, searches the
        web, and picks the best URLs.
     3. scraper — scrapes URLs and summarizes content.
-    4. chat — handles general conversation.
+    4. content_planner — transforms research into a
+       frozen video production plan.
+    5. chat — handles general conversation.
 
     Returns:
         The compiled StateGraph ready for execution.
@@ -56,6 +60,7 @@ def build_workflow():
     graph_builder.add_node("message_analyzer", message_analyzer)
     graph_builder.add_node("search_node", search_node)
     graph_builder.add_node("scraper", scraper)
+    graph_builder.add_node("content_planner", content_planner)
     graph_builder.add_node("chat", chat)
 
     # Edges
@@ -78,7 +83,10 @@ def build_workflow():
     # Search results always flow to scraper
     graph_builder.add_edge("search_node", "scraper")
 
-    # Scraper terminates the workflow
-    graph_builder.add_edge("scraper", END)
+    # Scraper flows into content planner
+    graph_builder.add_edge("scraper", "content_planner")
+
+    # Content planner terminates the workflow
+    graph_builder.add_edge("content_planner", END)
 
     return graph_builder.compile()

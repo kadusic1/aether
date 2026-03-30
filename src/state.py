@@ -6,6 +6,7 @@ from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from niche_config import Niche
+from src.schemas import ContentPlan
 
 
 class VideoState(TypedDict):
@@ -26,6 +27,9 @@ class VideoState(TypedDict):
             operator.add reducer.
         sources_overview: LLM-generated summary of
             scraped source content.
+        content_plan: Production plan for the
+            video. Set by the content_planner node.
+            None until planning is complete.
         intent: Classified intent of the user's prompt
             (video_planning, video_generation,
             basic_chat).
@@ -38,5 +42,6 @@ class VideoState(TypedDict):
     web_sources: Annotated[list[str], operator.add]
     youtube_sources: Annotated[list[str], operator.add]
     sources_overview: str
+    content_plan: ContentPlan | None
     intent: str
     use_search: bool
