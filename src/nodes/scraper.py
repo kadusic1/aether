@@ -49,6 +49,11 @@ async def scraper(state: VideoState) -> dict:
 
     raw_content = web_content + yt_content
 
+    # No need to do the LLM overview if the intent is just chat.
+    # The LLM overview is focused on the "creator" side of things.
+    if state["intent"] == "chat":
+        return {"sources_overview": raw_content}
+
     # Generate structured overview via LLM
     model = load_chat_model(
         provider="mistral",
